@@ -6,7 +6,7 @@ ARG ARGO_CD_VERSION="v1.3.6"
 # https://github.com/argoproj/argo-cd/blob/master/Dockerfile
 ARG GO_VERSION="1.12.6"
 
-ARG CUSTOMIZE_VERSION="v3.5.1"
+ARG CUSTOMIZE_VERSION="v3.2.1"
 
 #---------------------------------------------------------------#
 #--------Build kustomize-kvsource-vault and Kustomize-----------#
@@ -19,6 +19,9 @@ ENV GOOS=linux
 ENV GOARCH=amd64
 ENV GO111MODULE=on
 
+# Install kustomize via Go
+RUN go get sigs.k8s.io/kustomize/kustomize/v3@${CUSTOMIZE_VERSION}
+
 ARG PKG_NAME=SecretsFromVault
 
 WORKDIR /go/src/github.com/RealGeeks/
@@ -29,11 +32,7 @@ RUN git clone https://github.com/RealGeeks/kustomize-kvsource-vault.git
 WORKDIR /go/src/github.com/RealGeeks/kustomize-kvsource-vault
 
 # Perform the build
-#RUN go install
 RUN go build -buildmode plugin -o ${PKG_NAME}.so ${PKG_NAME}.go
-
-# Install kustomize via Go
-RUN go get sigs.k8s.io/kustomize/kustomize/v3@kustomize/${CUSTOMIZE_VERSION}
 
 #--------------------------------------------#
 #--------Build Custom Argo Image-------------#
@@ -56,7 +55,7 @@ COPY --from=kustomize-kvsource-vault-builder \
 
 # Copy the plugin to kustomize plugin path
 COPY --from=kustomize-kvsource-vault-builder \
-  /go/src/github.com/RealGeeks/kustomize-kvsource-vault/* $KUSTOMIZE_PLUGIN_PATH/kustomize.config.realgeeks.com/v1beta1/${PKG_NAME}/
+  /go/src/github.com/RealGeeks/kustomize-kvsource-vault/* $KUSTOMIZE_PLUGIN_PATH/kustomize.config.realgeeks.com/v1beta1/secretsfromvault/
 
 # Switch back to non-root user
 USER argocd
